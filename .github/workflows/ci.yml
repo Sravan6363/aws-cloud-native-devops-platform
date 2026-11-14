@@ -44,6 +44,23 @@ jobs:
           vuln-type: os,library
           ignore-unfixed: true
           exit-code: '0'
+        
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag Docker image
+        run: |
+          docker tag employee-api:1.0.0 sravan1305/sravankumar:latest
+          docker tag employee-api:1.0.0 sravan1305/sravankumar:${{ github.sha }}
+
+      - name: Push Docker image to Docker Hub
+        run: |
+          docker push sravan1305/sravankumar:latest
+          docker push sravan1305/sravankumar:${{ github.sha }}
+
 
       - name: Test API health
         run: |
