@@ -1,0 +1,58 @@
+name: Employee API CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Prepare test environment
+        run: cp .env.example .env
+
+      - name: Validate Compose configuration
+        run: docker compose config
+
+      - name: Build and start containers
+        run: docker compose up -d --build
+
+      - name: Test API health
+        run: |
+          healthy=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/health; then
+              healthy=1
+              break
+            fi
+            sleep 2
+          done
+          test "$healthy" -eq 1
+
+      - name: Test employee creation
+        run: |
+          curl -fsS -X POST http://localhost:3000/employees \
+            -H "Content-Type: application/json" \
+            -d '{"name":"CI Test","email":"ci@example.com","role":"DevOps Engineer"}'
+
+      - name: Test employee retrieval
+        run: |
+          curl -fsS http://localhost:3000/employees \
+            | grep -q "ci@example.com"
+
+      - name: Display container logs
+        if: always()
+        run: docker compose logs || true
+
+      - name: Clean up
+        if: always()
+        run: docker compose down -v
