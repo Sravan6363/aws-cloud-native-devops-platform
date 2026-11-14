@@ -1,11 +1,13 @@
-cat > .github/workflows/ci.yml <<'EOF'
+
 name: Employee API CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -21,19 +23,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Prepare test environment
+      - name: Prepare environment
         run: cp .env.example .env
 
-      - name: Validate Compose configuration
+      - name: Validate Docker Compose
         run: docker compose config
 
-      - name: Build and start containers
-        run: docker compose up -d --build
+      - name: Build application
+        run: docker compose build
 
-      - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
+      - name: Start containers
+        run: docker compose up -d
+
+      - name: Scan application image with Trivy
+        uses: aquasecurity/trivy-action@0.33.1
         with:
-          version: v0.76.1
           image-ref: employee-api:1.0.0
           format: table
           severity: HIGH,CRITICAL
@@ -59,14 +63,12 @@ jobs:
 
       - name: Test employee retrieval
         run: |
-          curl -fsS http://localhost:3000/employees \
-            | grep -q "ci@example.com"
+          curl -fsS http://localhost:3000/employees | grep -q "ci@example.com"
 
-      - name: Display container logs
+      - name: Display logs
         if: always()
         run: docker compose logs || true
 
-      - name: Clean up
+      - name: Cleanup
         if: always()
         run: docker compose down -v
-EOF
