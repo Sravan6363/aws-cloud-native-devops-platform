@@ -1,3 +1,4 @@
+cat > .github/workflows/ci.yml <<'EOF'
 name: Employee API CI
 
 on:
@@ -5,6 +6,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
@@ -26,17 +30,26 @@ jobs:
       - name: Build and start containers
         run: docker compose up -d --build
 
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          version: v0.76.1
+          image-ref: employee-api:1.0.0
+          format: table
+          severity: HIGH,CRITICAL
+          vuln-type: os,library
+          ignore-unfixed: true
+          exit-code: '0'
+
       - name: Test API health
         run: |
-          healthy=0
           for i in $(seq 1 30); do
             if curl -fsS http://localhost:3000/health; then
-              healthy=1
-              break
+              exit 0
             fi
             sleep 2
           done
-          test "$healthy" -eq 1
+          exit 1
 
       - name: Test employee creation
         run: |
@@ -56,3 +69,4 @@ jobs:
       - name: Clean up
         if: always()
         run: docker compose down -v
+EOF
