@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: employee-api
+  namespace: employee-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: employee-api
+  template:
+    metadata:
+      labels:
+        app: employee-api
+    spec:
+      containers:
+        - name: employee-api
+          image: sravan1305/sravankumar:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+          env:
+            - name: DB_HOST
+              value: postgres
+            - name: PORT
+              value: "3000"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 384Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: employee-api
+  namespace: employee-platform
+spec:
+  selector:
+    app: employee-api
+  ports:
+    - port: 3000
+      targetPort: 3000
+  type: ClusterIP
